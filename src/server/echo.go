@@ -44,9 +44,11 @@ func (h *EchoHandler) Handle(ctx context.Context, conn net.Conn) {
 	h.activeConn.Store(client, 1)
 
 	reader := bufio.NewReader(conn)
+
 	for {
 		// may occurs: client EOF, client timeout, server early close
 		msg, err := reader.ReadString('\n')
+		logger.Info("receive msg:", msg)
 		if err != nil {
 			if err == io.EOF {
 				logger.Info("connection close")

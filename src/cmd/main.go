@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/geoffreyhinton/goredis/src/lib/logger"
+	"github.com/geoffreyhinton/goredis/src/redis/handler"
 	"github.com/geoffreyhinton/goredis/src/server"
 )
 
@@ -19,5 +20,5 @@ func main() {
 		Address:    ":6399",
 		MaxConnect: 16,
 		Timeout:    2 * time.Second,
-	}, server.MakeEchoHandler())
+	}, handler.MakeHandler())
 }

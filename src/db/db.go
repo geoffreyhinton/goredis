@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime/debug"
 	"strings"
+	"sync"
 
 	"github.com/geoffreyhinton/goredis/src/datastruct/dict/dict"
 	"github.com/geoffreyhinton/goredis/src/interface/redis"
@@ -23,6 +24,7 @@ type DataEntity struct {
 	Code uint8
 	TTL  int64 // ttl in seconds, 0 for unlimited ttl
 	Data interface{}
+	sync.RWMutex
 }
 
 // args don't include cmd line
@@ -38,12 +40,27 @@ func MakeCmdMap() map[string]CmdFunc {
 	cmdMap := make(map[string]CmdFunc)
 	cmdMap["ping"] = Ping
 
+	// String commands
 	cmdMap["set"] = Set
 	cmdMap["setnx"] = SetNX
 	cmdMap["setex"] = SetEX
 	cmdMap["psetex"] = PSetEX
-
 	cmdMap["get"] = Get
+
+	// List commands
+	cmdMap["lpush"] = LPush
+	cmdMap["lpushx"] = LPushX
+	cmdMap["rpush"] = RPush
+	cmdMap["rpushx"] = RPushX
+	cmdMap["lpop"] = LPop
+	cmdMap["rpop"] = RPop
+	cmdMap["rpoplpush"] = RPopLPush
+	cmdMap["lrange"] = LRange
+	cmdMap["lrem"] = LRem
+	cmdMap["lset"] = LSet
+
+	cmdMap["llen"] = LLen
+	cmdMap["lindex"] = LIndex
 
 	return cmdMap
 }

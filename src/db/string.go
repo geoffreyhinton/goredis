@@ -6,92 +6,8 @@ import (
 
 	"github.com/geoffreyhinton/goredis/src/interface/redis"
 	"github.com/geoffreyhinton/goredis/src/redis/reply"
+	"github.com/shopspring/decimal"
 )
-
-const (
-	upsertPolicy = iota // default
-	insertPolicy        // set nx
-	updatePolicy        // set ex
-)
-
-const unlimitedTTL int64 = 0
-
-func Set(db *DB, args [][]byte) redis.Reply {
-	if len(args) < 2 {
-		return reply.MakeErrReply("ERR wrong number of arguments for 'set' command")
-	}
-	key := string(args[0])
-	value := args[1]
-
-	var policy = upsertPolicy
-	var ttl = unlimitedTTL
-
-	if len(args) > 2 {
-		for i := 2; i < len(args); i++ {
-			arg := strings.ToUpper(string(args[i]))
-			if arg == "NX" {
-				if policy == updatePolicy {
-					return &reply.SyntaxErrReply{}
-				}
-				policy = insertPolicy
-			} else if arg == "XX" { //update policy
-				if policy == insertPolicy {
-					return &reply.SyntaxErrReply{}
-				}
-				policy = updatePolicy
-			} else if arg == "EX" { // ttl in seconds
-				if ttl != unlimitedTTL {
-					return &reply.SyntaxErrReply{}
-				}
-				if i+1 >= len(args) {
-					return &reply.SyntaxErrReply{}
-				}
-				ttlArg, err := strconv.ParseInt(string(args[i+1]), 10, 64)
-				if err != nil {
-					return &reply.SyntaxErrReply{}
-				}
-				if ttlArg <= 0 {
-					return reply.MakeErrReply("ERR invalid expire time in set")
-				}
-				ttl = ttlArg * 1000 // convert to milliseconds
-				i++
-			} else if arg == "PX" { // ttl in milliseconds
-				if ttl != unlimitedTTL {
-					return &reply.SyntaxErrReply{}
-				}
-				if i+1 >= len(args) {
-					return &reply.SyntaxErrReply{}
-				}
-				ttlArg, err := strconv.ParseInt(string(args[i+1]), 10, 64)
-				if err != nil {
-					return &reply.SyntaxErrReply{}
-				}
-				if ttlArg <= 0 {
-					return reply.MakeErrReply("ERR invalid expire time in set")
-				}
-				ttl = ttlArg
-				i++
-			} else {
-				return &reply.SyntaxErrReply{}
-			}
-		}
-
-	}
-	entity := &DataEntity{
-		Code: StringCode,
-		Data: value,
-		TTL:  ttl,
-	}
-	switch policy {
-	case upsertPolicy:
-		db.Data.Put(key, entity)
-	case insertPolicy:
-		db.Data.PutIfAbsent(key, entity)
-	case updatePolicy:
-		db.Data.PutIfExists(key, entity)
-	}
-	return &reply.OkReply{}
-}
 
 func Get(db *DB, args [][]byte) redis.Reply {
 	if len(args) != 1 {
@@ -114,9 +30,96 @@ func Get(db *DB, args [][]byte) redis.Reply {
 	}
 }
 
+const (
+	upsertPolicy = iota // default
+	insertPolicy        // set nx
+	updatePolicy        // set ex
+)
+
+const unlimitedTTL int64 = 0
+
+// SET key value [EX seconds] [PX milliseconds] [NX|XX]
+func Set(db *DB, args [][]byte) redis.Reply {
+	if len(args) < 2 {
+		return reply.MakeErrReply("ERR wrong number of arguments for 'set' command")
+	}
+	key := string(args[0])
+	value := args[1]
+	policy := upsertPolicy
+	ttl := unlimitedTTL
+
+	// parse options
+	if len(args) > 2 {
+		for i := 2; i < len(args); i++ {
+			arg := strings.ToUpper(string(args[i]))
+			if arg == "NX" { // insert
+				if policy == updatePolicy {
+					return &reply.SyntaxErrReply{}
+				}
+				policy = insertPolicy
+			} else if arg == "XX" { // update policy
+				if policy == insertPolicy {
+					return &reply.SyntaxErrReply{}
+				}
+				policy = updatePolicy
+			} else if arg == "EX" { // ttl in seconds
+				if ttl != unlimitedTTL {
+					return &reply.SyntaxErrReply{}
+				}
+				if i+1 >= len(args) {
+					return &reply.SyntaxErrReply{}
+				}
+				ttlArg, err := strconv.ParseInt(string(args[i+1]), 10, 64)
+				if err != nil {
+					return &reply.SyntaxErrReply{}
+				}
+				if ttlArg <= 0 {
+					return reply.MakeErrReply("ERR invalid expire time in set")
+				}
+				ttl = ttlArg * 1000
+				i++ // skip next arg
+			} else if arg == "PX" { // ttl in milliseconds
+				if ttl != unlimitedTTL {
+					return &reply.SyntaxErrReply{}
+				}
+				if i+1 >= len(args) {
+					return &reply.SyntaxErrReply{}
+				}
+				ttlArg, err := strconv.ParseInt(string(args[i+1]), 10, 64)
+				if err != nil {
+					return &reply.SyntaxErrReply{}
+				}
+				if ttlArg <= 0 {
+					return reply.MakeErrReply("ERR invalid expire time in set")
+				}
+				ttl = ttlArg
+				i++ // skip next arg
+			} else {
+				return &reply.SyntaxErrReply{}
+			}
+		}
+	}
+
+	entity := &DataEntity{
+		Code: StringCode,
+		TTL:  ttl,
+		Data: value,
+	}
+
+	switch policy {
+	case upsertPolicy:
+		db.Data.Put(key, entity)
+	case insertPolicy:
+		db.Data.PutIfAbsent(key, entity)
+	case updatePolicy:
+		db.Data.PutIfExists(key, entity)
+	}
+	return &reply.OkReply{}
+}
+
 func SetNX(db *DB, args [][]byte) redis.Reply {
 	if len(args) != 2 {
-		return reply.MakeErrReply("ERR wrong number of arguments for 'setnx' command")
+		reply.MakeErrReply("ERR wrong number of arguments for 'setnx' command")
 	}
 	key := string(args[0])
 	value := args[1]
@@ -269,4 +272,214 @@ func MSetNX(db *DB, args [][]byte) redis.Reply {
 	}
 
 	return reply.MakeIntReply(1)
+}
+
+func GetSet(db *DB, args [][]byte) redis.Reply {
+	if len(args) != 2 {
+		return reply.MakeErrReply("ERR wrong number of arguments for 'getset' command")
+	}
+	key := string(args[0])
+	value := args[1]
+
+	rawEntity, exists := db.Data.Get(key)
+	var old []byte = nil
+	var entity *DataEntity
+	if exists {
+		entity, _ = rawEntity.(*DataEntity)
+		if entity.Code != StringCode {
+			return &reply.WrongTypeErrReply{}
+		}
+		old, _ = entity.Data.([]byte)
+	}
+
+	entity = &DataEntity{
+		Code: StringCode,
+		Data: value,
+	}
+	db.Data.Put(key, entity)
+
+	return reply.MakeBulkReply(old)
+}
+
+func Incr(db *DB, args [][]byte) redis.Reply {
+	if len(args) != 1 {
+		return reply.MakeErrReply("ERR wrong number of arguments for 'incr' command")
+	}
+	key := string(args[0])
+
+	db.Locks.Lock(key)
+	defer db.Locks.UnLock(key)
+
+	rawEntity, exists := db.Data.Get(key)
+	var entity *DataEntity
+	if exists {
+		entity, _ = rawEntity.(*DataEntity)
+		if entity.Code != StringCode {
+			return &reply.WrongTypeErrReply{}
+		}
+		bytes, _ := entity.Data.([]byte)
+		val, err := strconv.ParseInt(string(bytes), 10, 64)
+		if err != nil {
+			return reply.MakeErrReply("ERR value is not an integer or out of range")
+		}
+		entity.Data = []byte(strconv.FormatInt(val+1, 10))
+		return reply.MakeIntReply(val + 1)
+	} else {
+		entity := &DataEntity{
+			Code: StringCode,
+			Data: []byte("1"),
+		}
+		db.Data.Put(key, entity)
+		return reply.MakeIntReply(1)
+	}
+}
+
+func IncrBy(db *DB, args [][]byte) redis.Reply {
+	if len(args) != 2 {
+		return reply.MakeErrReply("ERR wrong number of arguments for 'incrby' command")
+	}
+	key := string(args[0])
+	rawDelta := string(args[1])
+	delta, err := strconv.ParseInt(rawDelta, 10, 64)
+	if err != nil {
+		return reply.MakeErrReply("ERR value is not an integer or out of range")
+	}
+
+	db.Locks.Lock(key)
+	defer db.Locks.UnLock(key)
+
+	rawEntity, exists := db.Data.Get(key)
+	var entity *DataEntity
+	if exists {
+		entity, _ = rawEntity.(*DataEntity)
+		if entity.Code != StringCode {
+			return &reply.WrongTypeErrReply{}
+		}
+		bytes, _ := entity.Data.([]byte)
+		val, err := strconv.ParseInt(string(bytes), 10, 64)
+		if err != nil {
+			return reply.MakeErrReply("ERR value is not an integer or out of range")
+		}
+		entity.Data = []byte(strconv.FormatInt(val+delta, 10))
+		return reply.MakeIntReply(val + delta)
+	} else {
+		entity := &DataEntity{
+			Code: StringCode,
+			Data: args[1],
+		}
+		db.Data.Put(key, entity)
+		return reply.MakeIntReply(delta)
+	}
+}
+
+func IncrByFloat(db *DB, args [][]byte) redis.Reply {
+	if len(args) != 2 {
+		return reply.MakeErrReply("ERR wrong number of arguments for 'incrbyfloat' command")
+	}
+	key := string(args[0])
+	rawDelta := string(args[1])
+	delta, err := decimal.NewFromString(rawDelta)
+	if err != nil {
+		return reply.MakeErrReply("ERR value is not a valid float")
+	}
+
+	db.Locks.Lock(key)
+	defer db.Locks.UnLock(key)
+
+	rawEntity, exists := db.Data.Get(key)
+	var entity *DataEntity
+	if exists {
+		entity, _ = rawEntity.(*DataEntity)
+		if entity.Code != StringCode {
+			return &reply.WrongTypeErrReply{}
+		}
+		bytes, _ := entity.Data.([]byte)
+		val, err := decimal.NewFromString(string(bytes))
+		if err != nil {
+			return reply.MakeErrReply("ERR value is not a valid float")
+		}
+		result := val.Add(delta)
+		resultBytes := []byte(result.String())
+		entity.Data = resultBytes
+		return reply.MakeBulkReply(resultBytes)
+	} else {
+		entity := &DataEntity{
+			Code: StringCode,
+			Data: args[1],
+		}
+		db.Data.Put(key, entity)
+		return reply.MakeBulkReply(args[1])
+	}
+}
+
+func Decr(db *DB, args [][]byte) redis.Reply {
+	if len(args) != 1 {
+		return reply.MakeErrReply("ERR wrong number of arguments for 'decr' command")
+	}
+	key := string(args[0])
+
+	db.Locks.Lock(key)
+	defer db.Locks.UnLock(key)
+
+	rawEntity, exists := db.Data.Get(key)
+	var entity *DataEntity
+	if exists {
+		entity, _ = rawEntity.(*DataEntity)
+		if entity.Code != StringCode {
+			return &reply.WrongTypeErrReply{}
+		}
+		bytes, _ := entity.Data.([]byte)
+		val, err := strconv.ParseInt(string(bytes), 10, 64)
+		if err != nil {
+			return reply.MakeErrReply("ERR value is not an integer or out of range")
+		}
+		entity.Data = []byte(strconv.FormatInt(val-1, 10))
+		return reply.MakeIntReply(val - 1)
+	} else {
+		entity := &DataEntity{
+			Code: StringCode,
+			Data: []byte("-1"),
+		}
+		db.Data.Put(key, entity)
+		return reply.MakeIntReply(-1)
+	}
+}
+
+func DecrBy(db *DB, args [][]byte) redis.Reply {
+	if len(args) != 2 {
+		return reply.MakeErrReply("ERR wrong number of arguments for 'decrby' command")
+	}
+	key := string(args[0])
+	rawDelta := string(args[1])
+	delta, err := strconv.ParseInt(rawDelta, 10, 64)
+	if err != nil {
+		return reply.MakeErrReply("ERR value is not an integer or out of range")
+	}
+
+	db.Locks.Lock(key)
+	defer db.Locks.UnLock(key)
+
+	rawEntity, exists := db.Data.Get(key)
+	var entity *DataEntity
+	if exists {
+		entity, _ = rawEntity.(*DataEntity)
+		if entity.Code != StringCode {
+			return &reply.WrongTypeErrReply{}
+		}
+		bytes, _ := entity.Data.([]byte)
+		val, err := strconv.ParseInt(string(bytes), 10, 64)
+		if err != nil {
+			return reply.MakeErrReply("ERR value is not an integer or out of range")
+		}
+		entity.Data = []byte(strconv.FormatInt(val-delta, 10))
+		return reply.MakeIntReply(val - delta)
+	} else {
+		valueStr := strconv.FormatInt(-delta, 10)
+		entity := &DataEntity{
+			Code: StringCode,
+			Data: []byte(valueStr),
+		}
+		db.Data.Put(key, entity)
+		return reply.MakeIntReply(-delta)
+	}
 }

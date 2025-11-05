@@ -49,14 +49,22 @@ func MakeCmdMap() map[string]CmdFunc {
 	cmdMap := make(map[string]CmdFunc)
 	cmdMap["ping"] = Ping
 
-	// String commands
 	cmdMap["set"] = Set
 	cmdMap["setnx"] = SetNX
 	cmdMap["setex"] = SetEX
 	cmdMap["psetex"] = PSetEX
-	cmdMap["get"] = Get
+	cmdMap["mset"] = MSet
+	cmdMap["mget"] = MGet
 	cmdMap["msetnx"] = MSetNX
-	// List commands
+	cmdMap["get"] = Get
+	cmdMap["del"] = Del
+	cmdMap["getset"] = GetSet
+	cmdMap["incr"] = Incr
+	cmdMap["incrby"] = IncrBy
+	cmdMap["incrbyfloat"] = IncrByFloat
+	cmdMap["decr"] = Decr
+	cmdMap["decrby"] = DecrBy
+
 	cmdMap["lpush"] = LPush
 	cmdMap["lpushx"] = LPushX
 	cmdMap["rpush"] = RPush
@@ -64,12 +72,11 @@ func MakeCmdMap() map[string]CmdFunc {
 	cmdMap["lpop"] = LPop
 	cmdMap["rpop"] = RPop
 	cmdMap["rpoplpush"] = RPopLPush
-	cmdMap["lrange"] = LRange
 	cmdMap["lrem"] = LRem
-	cmdMap["lset"] = LSet
-
 	cmdMap["llen"] = LLen
 	cmdMap["lindex"] = LIndex
+	cmdMap["lset"] = LSet
+	cmdMap["lrange"] = LRange
 
 	return cmdMap
 }

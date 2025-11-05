@@ -1,0 +1,17 @@
+# Redis ACL file generated on 2024-11-04T21:00:00Z
+# Format: user <username> <attributes>
+
+# Default user - no authentication required, full access
+user default on nopass ~* +@all
+
+# Admin user - full access with password
+user admin on >admin123 ~* +@all
+
+# Application user - limited access to app keys only
+user app_user on >app_password ~app:* +@read +@write -@dangerous
+
+# Read-only user - can only read data
+user readonly on >readonly123 ~* +@read -@write -@admin
+
+# Session user - access to session data only
+user session_mgr on >session_secret ~session:* ~temp:* +@all

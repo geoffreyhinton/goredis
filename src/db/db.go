@@ -37,10 +37,10 @@ type DataEntityWithKey struct {
 type CmdFunc func(db *DB, args [][]byte) redis.Reply
 
 type DB struct {
-	Data *dict.Dict // key -> DataEntity
-	// dict will ensure thread safety of its method
-	// use this mutex for complicated command only, eg. rpush, incr ...
-	Locks *lock.LockMap
+	Data   *dict.Dict    // key -> DataEntity
+	Locks  *lock.LockMap // use this mutex for complicated command only, eg. rpush, incr ...
+	Auth   *AuthManager  // Authentication manager
+	Config *Config       // Configuration
 }
 
 var cmdMap = MakeCmdMap()
@@ -78,13 +78,48 @@ func MakeCmdMap() map[string]CmdFunc {
 	cmdMap["lset"] = LSet
 	cmdMap["lrange"] = LRange
 
+	// Auth commands
+	cmdMap["auth"] = Auth
+	cmdMap["acl"] = AclCommand
+
 	return cmdMap
 }
 
 func MakeDB() *DB {
+	return MakeDBWithConfig("redis.conf")
+}
+
+func MakeDBWithConfig(configPath string) *DB {
+	// Load configuration
+	config, err := LoadConfigFromFile(configPath)
+	if err != nil {
+		logger.Warn(fmt.Sprintf("Error loading config: %v, using defaults", err))
+		config = &Config{Port: 6399, Database: 16}
+	}
+
+	// Create auth manager
+	auth := NewAuthManager()
+
+	// Load users from ACL file if specified
+	if config.ACLFile != "" {
+		if err := auth.LoadUsersFromACLFile(config.ACLFile); err != nil {
+			logger.Warn(fmt.Sprintf("Error loading ACL file: %v", err))
+		}
+	}
+
+	// Set requirepass if specified in config
+	if config.RequirePass != "" {
+		// Update default user to require password
+		defaultUser := auth.GetDefaultUser()
+		defaultUser.PasswordHash = hashPassword(config.RequirePass)
+		defaultUser.NoPass = false
+	}
+
 	return &DB{
-		Data:  dict.Make(1024),
-		Locks: &lock.LockMap{},
+		Data:   dict.Make(1024),
+		Locks:  &lock.LockMap{},
+		Auth:   auth,
+		Config: config,
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	DBImpl "github.com/geoffreyhinton/goredis/src/db"
@@ -13,6 +14,7 @@ import (
 	"github.com/geoffreyhinton/goredis/src/lib/logger"
 	"github.com/geoffreyhinton/goredis/src/lib/sync/atomic"
 	"github.com/geoffreyhinton/goredis/src/redis/parser"
+	"github.com/geoffreyhinton/goredis/src/redis/reply"
 )
 
 var (
@@ -37,9 +39,7 @@ func (h *Handler) Handle(ctx context.Context, conn net.Conn) {
 		conn.Close()
 	}
 
-	client := &Client{
-		conn: conn,
-	}
+	client := MakeClient(conn, h.db.(*DBImpl.DB))
 	h.activeConn.Store(client, 1)
 
 	reader := bufio.NewReader(conn)
@@ -98,7 +98,33 @@ func (h *Handler) Handle(ctx context.Context, conn net.Conn) {
 
 				// send reply
 				args := parser.Parse(client.sentLines)
-				result := h.db.Exec(args)
+
+				// Create authentication context for this client
+				authCtx := &DBImpl.AuthContext{
+					User:          client.GetUser(),
+					Authenticated: client.IsAuthenticated(),
+				}
+
+				// Execute command with authentication
+				result := h.db.(*DBImpl.DB).AuthenticatedExec(authCtx, args)
+
+				// Update client authentication state if AUTH command was successful
+				if len(args) > 0 && strings.ToLower(string(args[0])) == "auth" {
+					if _, ok := result.(*reply.OkReply); ok {
+						// Get the authenticated user
+						var username string
+						if len(args) == 2 {
+							username = "default"
+						} else if len(args) == 3 {
+							username = string(args[1])
+						}
+
+						if user, exists := h.db.(*DBImpl.DB).Auth.GetUser(username); exists {
+							client.SetUser(user)
+						}
+					}
+				}
+
 				if result != nil {
 					conn.Write(result.ToBytes())
 				} else {

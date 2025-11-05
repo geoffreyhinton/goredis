@@ -1,0 +1,14 @@
+{
+  "port": 6399,
+  "databases": 16,
+  "requirepass": "mypassword123",
+  "aclfile": "./config/users.acl",
+  "logfile": "./logs/redis.log",
+  "loglevel": "info",
+  "maxmemory": "256mb",
+  "maxmemory_policy": "allkeys-lru",
+  "bind": "127.0.0.1",
+  "timeout": 0,
+  "tcp_keepalive": 300,
+  "tcp_backlog": 511
+}

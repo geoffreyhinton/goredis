@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/geoffreyhinton/goredis/src/datastruct/dict/dict"
+	"github.com/geoffreyhinton/goredis/src/datastruct/lock"
 	"github.com/geoffreyhinton/goredis/src/interface/redis"
 	"github.com/geoffreyhinton/goredis/src/lib/logger"
 	"github.com/geoffreyhinton/goredis/src/redis/reply"
@@ -27,11 +28,19 @@ type DataEntity struct {
 	sync.RWMutex
 }
 
+type DataEntityWithKey struct {
+	DataEntity
+	Key string
+}
+
 // args don't include cmd line
 type CmdFunc func(db *DB, args [][]byte) redis.Reply
 
 type DB struct {
 	Data *dict.Dict // key -> DataEntity
+	// dict will ensure thread safety of its method
+	// use this mutex for complicated command only, eg. rpush, incr ...
+	Locks *lock.LockMap
 }
 
 var cmdMap = MakeCmdMap()
@@ -46,7 +55,7 @@ func MakeCmdMap() map[string]CmdFunc {
 	cmdMap["setex"] = SetEX
 	cmdMap["psetex"] = PSetEX
 	cmdMap["get"] = Get
-
+	cmdMap["msetnx"] = MSetNX
 	// List commands
 	cmdMap["lpush"] = LPush
 	cmdMap["lpushx"] = LPushX
@@ -67,7 +76,8 @@ func MakeCmdMap() map[string]CmdFunc {
 
 func MakeDB() *DB {
 	return &DB{
-		Data: dict.Make(1024),
+		Data:  dict.Make(1024),
+		Locks: &lock.LockMap{},
 	}
 }
 
@@ -90,4 +100,26 @@ func (db *DB) Exec(args [][]byte) (result redis.Reply) {
 		result = cmdFunc(db, [][]byte{})
 	}
 	return
+}
+
+func (db *DB) Remove(key string) {
+	db.Data.Remove(key)
+	db.Locks.Clean(key)
+}
+
+func (db *DB) Removes(keys ...string) (deleted int) {
+	db.Locks.Locks(keys...)
+	defer func() {
+		db.Locks.UnLocks(keys...)
+		db.Locks.Cleans(keys...)
+	}()
+	deleted = 0
+	for _, key := range keys {
+		_, exists := db.Data.Get(key)
+		if exists {
+			db.Data.Remove(key)
+			deleted++
+		}
+	}
+	return deleted
 }

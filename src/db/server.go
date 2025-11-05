@@ -13,4 +13,5 @@ func Ping(db *DB, args [][]byte) redis.Reply {
 	} else {
 		return reply.MakeErrReply("ERR wrong number of arguments for 'ping' command")
 	}
+
 }

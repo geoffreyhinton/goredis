@@ -235,18 +235,102 @@ func MakeCmdMap() map[string]CmdFunc {
 		# Trả về: 1 (nếu thời gian hết hạn đã được loại bỏ), 0 (nếu key không tồn tại hoặc không có thời gian hết hạn)
 	*/
 	cmdMap["persist"] = Persist
+	/*
+			lpush
+		Công dụng: Các lệnh thao tác với cấu trúc dữ liệu danh sách (list)
+		Ví dụ:
+			LPUSH mylist "world"
+			LPUSH mylist "hello"
+		# Trả về: 2 (độ dài mới của danh sách sau khi chèn)
 
+	*/
 	cmdMap["lpush"] = LPush
+	/*
+			lpushx
+		Công dụng: Chèn các phần tử vào đầu danh sách chỉ khi danh sách đã tồn tại
+		Ví dụ:
+			LPUSHX mylist "!"
+		# Trả về:  (độ dài mới của danh sách sau khi chèn)
+	*/
 	cmdMap["lpushx"] = LPushX
+	/*
+			rpush
+		Công dụng: Chèn các phần tử vào cuối danh sách
+		Ví dụ:
+			RPUSH mylist "hello"
+			RPUSH mylist "world"
+		# Trả về: 2 (độ dài mới của danh sách sau khi chèn)
+	*/
 	cmdMap["rpush"] = RPush
+	/*
+			rpushx
+		Công dụng: Chèn các phần tử vào cuối danh sách chỉ khi danh sách đã tồn tại
+		Ví dụ:
+			RPUSHX mylist "!"
+		# Trả về: (độ dài mới của danh sách sau khi chèn)
+	*/
 	cmdMap["rpushx"] = RPushX
+	/*
+			lpop
+		Công dụng: Loại bỏ và trả về phần tử đầu tiên của danh sách
+		Ví dụ:
+			LPOP mylist
+		# Trả về: "hello" (phần tử bị loại bỏ)
+	*/
 	cmdMap["lpop"] = LPop
+	/*
+			rpop
+		Công dụng: Loại bỏ và trả về phần tử cuối cùng của danh sách
+		Ví dụ:
+			RPOP mylist
+		# Trả về: "world" (phần tử bị loại bỏ)
+	*/
 	cmdMap["rpop"] = RPop
+	/*
+			rpoplpush
+		Công dụng: Loại bỏ phần tử cuối cùng của danh sách nguồn và chèn nó vào đầu danh sách đích
+		Ví dụ:
+			RPOPLPUSH sourceList destList
+		# Trả về: Phần tử bị di chuyển từ sourceList sang destList
+	*/
 	cmdMap["rpoplpush"] = RPopLPush
+	/*
+			lrem
+		Công dụng: Loại bỏ các phần tử khỏi danh sách dựa trên giá trị
+		Ví dụ:
+			LREM mylist 2 "hello"
+	*/
 	cmdMap["lrem"] = LRem
+	/*
+			llen
+		Công dụng: Lấy độ dài của danh sách
+		Ví dụ:
+			LLEN mylist
+		# Trả về: Độ dài của danh sách mylist
+	*/
 	cmdMap["llen"] = LLen
+	/*
+			lindex
+		Công dụng: Lấy phần tử tại một vị trí cụ thể trong danh sách
+		Ví dụ:
+			LINDEX mylist 0
+		# Trả về: Phần tử tại vị trí 0 trong danh sách mylist
+	*/
 	cmdMap["lindex"] = LIndex
+	/*
+			lset
+		Công dụng: Cập nhật phần tử tại một vị trí cụ thể trong danh sách
+		Ví dụ:
+			LSET mylist 0 "newValue"
+	*/
 	cmdMap["lset"] = LSet
+	/*
+			lrange
+		Công dụng: Lấy một dải phần tử từ danh sách
+		Ví dụ:
+			LRANGE mylist 0 -1
+		# Trả về: Tất cả các phần tử trong danh sách mylist
+	*/
 	cmdMap["lrange"] = LRange
 
 	cmdMap["hset"] = HSet

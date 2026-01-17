@@ -52,14 +52,68 @@ var cmdMap = MakeCmdMap()
 
 func MakeCmdMap() map[string]CmdFunc {
 	cmdMap := make(map[string]CmdFunc)
+	/*
+			PING
+		Công dụng: Kiểm tra kết nối với Redis server
+		Ví dụ: PING
+		# Trả về: PONG
+	*/
 	cmdMap["ping"] = Ping
-
+	/*
+			SET
+		Công dụng: Thiết lập giá trị cho một key
+		Ví dụ:
+		SET name "John"
+		# Trả về: OK
+	*/
 	cmdMap["set"] = Set
+	/*
+			SETNX
+		Công dụng: Thiết lập giá trị cho một key nếu key chưa tồn tại
+		Ví dụ:
+		SETNX counter 1
+		# Trả về: 1 (nếu key chưa tồn tại), 0 (nếu key đã tồn tại)
+	*/
 	cmdMap["setnx"] = SetNX
+	/*
+				SETEX
+		Công dụng: Set key với thời gian hết hạn (tính bằng giây)
+		Ví dụ:
+		SETEX session_token 3600 "abc123"
+		# Set token hết hạn sau 3600 giây (1 giờ)
+	*/
 	cmdMap["setex"] = SetEX
+	/*
+				PSETEX
+		Công dụng: Set key với thời gian hết hạn (tính bằng mili giây)
+		Ví dụ:
+		PSETEX session_token 1500 "abc123"
+		# Set token hết hạn sau 1500 mili giây (1.5 giây)
+	*/
 	cmdMap["psetex"] = PSetEX
+	/*
+			MSET
+		Công dụng: Thiết lập nhiều key-value cùng lúc
+		Ví dụ:
+		MSET name "John" age "30" city "New York"
+		# Trả về: OK
+	*/
 	cmdMap["mset"] = MSet
+	/*
+			MGET
+		Công dụng: Lấy giá trị của nhiều key cùng lúc
+		Ví dụ:
+		MGET name age city
+		# Trả về: "John", "30", "New York"
+	*/
 	cmdMap["mget"] = MGet
+	/*
+			MSETNX
+		Công dụng: Thiết lập nhiều key-value cùng lúc nếu tất cả các key chưa tồn tại
+		Ví dụ:
+		MSETNX name "John" age "30"
+		# Trả về: 1 (nếu tất cả các key chưa tồn tại), 0 (nếu ít nhất một key đã tồn tại)
+	*/
 	cmdMap["msetnx"] = MSetNX
 	cmdMap["get"] = Get
 	cmdMap["del"] = Del
@@ -76,6 +130,7 @@ func MakeCmdMap() map[string]CmdFunc {
 	cmdMap["ttl"] = TTL
 	cmdMap["pttl"] = PTTL
 	cmdMap["persist"] = Persist
+
 	cmdMap["lpush"] = LPush
 	cmdMap["lpushx"] = LPushX
 	cmdMap["rpush"] = RPush
@@ -88,6 +143,20 @@ func MakeCmdMap() map[string]CmdFunc {
 	cmdMap["lindex"] = LIndex
 	cmdMap["lset"] = LSet
 	cmdMap["lrange"] = LRange
+
+	cmdMap["hset"] = HSet
+	cmdMap["hsetnx"] = HSetNX
+	cmdMap["hget"] = HGet
+	cmdMap["hexists"] = HExists
+	cmdMap["hdel"] = HDel
+	cmdMap["hlen"] = HLen
+	cmdMap["hmget"] = HMGet
+	cmdMap["hmset"] = HMSet
+	cmdMap["hkeys"] = HKeys
+	cmdMap["hvals"] = HVals
+	cmdMap["hgetall"] = HGetAll
+	cmdMap["hincrby"] = HIncrBy
+	cmdMap["hincrbyfloat"] = HIncrByFloat
 
 	return cmdMap
 }

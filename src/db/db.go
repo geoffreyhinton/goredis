@@ -115,20 +115,125 @@ func MakeCmdMap() map[string]CmdFunc {
 		# Trả về: 1 (nếu tất cả các key chưa tồn tại), 0 (nếu ít nhất một key đã tồn tại)
 	*/
 	cmdMap["msetnx"] = MSetNX
+	/*
+			GET
+		Công dụng: Lấy giá trị của một key
+		Ví dụ:
+		GET name
+		# Trả về: "John"
+	*/
 	cmdMap["get"] = Get
+	/*
+			DEL
+		Công dụng: Xoá một hoặc nhiều key
+		Ví dụ:
+		DEL name age
+		# Trả về: Số lượng key đã bị xoá
+	*/
 	cmdMap["del"] = Del
+	/*
+			GETSET
+		Công dụng: Thiết lập giá trị mới cho một key và trả về giá trị cũ
+		Ví dụ:
+		GETSET name "Doe"
+		# Trả về: "John" (giá trị cũ của key "name")
+	*/
 	cmdMap["getset"] = GetSet
+	/*
+			INCR
+		Công dụng: Tăng giá trị số nguyên của một key lên 1
+		Ví dụ:
+		INCR counter
+		# Trả về: Giá trị mới của key "counter" sau khi tăng
+	*/
 	cmdMap["incr"] = Incr
+	/*
+			INCRBY
+		Công dụng: Tăng giá trị số nguyên của một key lên một số nguyên được chỉ định
+		Ví dụ:
+		INCRBY counter 5
+		# Trả về: Giá trị mới của key "counter" sau khi tăng
+	*/
 	cmdMap["incrby"] = IncrBy
+	/*
+			INCRBYFLOAT
+		Công dụng: Tăng giá trị số thực của một key lên một số thực được chỉ định
+		Ví dụ:
+		INCRBYFLOAT balance 10.5
+		# Trả về: Giá trị mới của key "balance" sau khi tăng
+	*/
 	cmdMap["incrbyfloat"] = IncrByFloat
+	/*
+			DECR
+		Công dụng: Giảm giá trị số nguyên của một key đi 1
+		Ví dụ:
+		DECR counter
+		# Trả về: Giá trị mới của key "counter" sau khi giảm
+	*/
 	cmdMap["decr"] = Decr
+	/*
+			DECRBY
+		Công dụng: Giảm giá trị số nguyên của một key đi một số nguyên được chỉ định
+		Ví dụ:
+		DECRBY counter 3
+		# Trả về: Giá trị mới của key "counter" sau khi giảm
+	*/
 	cmdMap["decrby"] = DecrBy
+	/*
+			EXPIRE
+		Công dụng: Đặt thời gian hết hạn cho một key (tính bằng giây)
+		Ví dụ:
+		EXPIRE session_token 3600
+		# Đặt thời gian hết hạn cho key "session_token" sau 3600 giây (1 giờ)
+	*/
 	cmdMap["expire"] = Expire
+	/*
+			EXPIREAT
+		Công dụng: Đặt thời gian hết hạn cho một key dựa trên thời gian Unix timestamp
+		Ví dụ:
+		EXPIREAT session_token 1672531199
+		# Đặt thời gian hết hạn cho key "session_token" vào thời điểm Unix timestamp 1672531199
+	*/
 	cmdMap["expireat"] = ExpireAt
+	/*
+			PEXPIRE
+		Công dụng: Đặt thời gian hết hạn cho một key (tính bằng mili giây)
+		Ví dụ:
+		PEXPIRE session_token 1500
+		# Đặt thời gian hết hạn cho key "session_token" sau 1500 mili giây (1.5 giây)
+	*/
 	cmdMap["pexpire"] = PExpire
+	/*
+			PEXPIREAT
+		Công dụng: Đặt thời gian hết hạn cho một key dựa trên thời gian Unix timestamp (tính bằng mili giây)
+		Ví dụ:
+		PEXPIREAT session_token 1672531199123
+		# Đặt thời gian hết hạn cho key "session_token" vào thời điểm Unix timestamp 1672531199123
+	*/
 	cmdMap["pexpireat"] = PExpireAt
+	/*
+			TTL
+		Công dụng: Lấy thời gian còn lại trước khi một key hết hạn (tính bằng giây)
+		Ví dụ:
+		TTL session_token
+		# Trả về: Số giây còn lại trước khi key "session_token" hết hạn
+	*/
 	cmdMap["ttl"] = TTL
+	/*
+			PTTL
+		Công dụng: Lấy thời gian còn lại trước khi một key hết hạn (tính bằng mili giây)
+		Ví dụ:
+		PTTL session_token
+		# Trả về: Số mili giây còn lại trước khi key "session_token" hết hạn
+	*/
 	cmdMap["pttl"] = PTTL
+	/*
+			PERSIST
+		Công dụng: Loại bỏ thời gian hết hạn của một key, biến nó thành key vĩnh viễn
+		Ví dụ:
+		PERSIST session_token
+		# Trả về: 1 (nếu thời gian hết hạn đã được loại bỏ), 0 (nếu key không tồn tại hoặc không có thời gian hết hạn)
+	*/
 	cmdMap["persist"] = Persist
 
 	cmdMap["lpush"] = LPush

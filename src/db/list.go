@@ -179,6 +179,9 @@ func LRange(db *DB, args [][]byte) redis.Reply {
 		return reply.MakeErrReply("ERR value is not an integer or out of range")
 	}
 	stop := int(stop64)
+	// fix lock key
+	db.Locks.RLock(key)
+	defer db.Locks.RUnLock(key)
 
 	// get data
 	entity, exists := db.Get(key)

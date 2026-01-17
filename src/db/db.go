@@ -442,6 +442,85 @@ func MakeCmdMap() map[string]CmdFunc {
 	*/
 	cmdMap["hincrbyfloat"] = HIncrByFloat
 
+	/*
+			zadd
+		Công dụng: Thêm một hoặc nhiều thành viên vào sorted set, hoặc cập nhật điểm của thành viên đã tồn tại
+		Ví dụ:
+			ZADD leaderboard 2500 "Alice" 3200 "Bob" 1800 "Charlie"
+		# Thêm Alice (2500 điểm), Bob (3200 điểm), Charlie (1800 điểm) vào bảng xếp hạng
+	*/
+	cmdMap["zadd"] = ZAdd
+	/*
+			zcard
+		Công dụng: Lấy số lượng thành viên trong sorted set
+		Ví dụ:
+			ZCARD leaderboard
+		# Trả về số lượng thành viên trong bảng xếp hạng
+	*/
+	cmdMap["zcard"] = ZCard
+
+	/*
+			zscore
+		Công dụng: Lấy điểm số của một thành viên trong sorted set
+		Ví dụ:
+			ZSCORE leaderboard "Alice"
+		# Trả về điểm số của Alice trong bảng xếp hạng
+	*/
+	cmdMap["zscore"] = ZScore
+
+	/*
+			zrem
+		Công dụng: Xóa một hoặc nhiều thành viên khỏi sorted set
+		Ví dụ:
+			ZREM leaderboard "Alice" "Bob"
+		# Xóa Alice và Bob khỏi bảng xếp hạng
+	*/
+	cmdMap["zrem"] = ZRem
+
+	/*
+			zincrby
+		Công dụng: Tăng điểm số của một thành viên trong sorted set
+		Ví dụ:
+			ZINCRBY leaderboard 100 "Alice"
+		# Tăng điểm số của Alice thêm 100 điểm
+	*/
+	cmdMap["zincrby"] = ZIncrBy
+
+	/*
+			zrange
+		Công dụng: Lấy danh sách thành viên trong một phạm vi xếp hạng
+		Ví dụ:
+			ZRANGE leaderboard 0 2 WITHSCORES
+		# Lấy 3 thành viên đầu tiên với điểm số
+	*/
+	cmdMap["zrange"] = ZRange
+
+	/*
+			zrangebyscore
+		Công dụng: Lấy danh sách thành viên trong một phạm vi điểm số
+		Ví dụ:
+			ZRANGEBYSCORE leaderboard 100 200 WITHSCORES
+		# Lấy các thành viên có điểm từ 100 đến 200
+	*/
+	cmdMap["zrangebyscore"] = ZRangeByScore
+
+	/*
+			zpopmax
+		Công dụng: Xóa và trả về thành viên có điểm cao nhất
+		Ví dụ:
+			ZPOPMAX leaderboard
+		# Xóa và trả về thành viên có điểm cao nhất
+	*/
+	cmdMap["zpopmax"] = ZPopMax
+
+	/*
+			zpopmin
+		Công dụng: Xóa và trả về thành viên có điểm thấp nhất
+		Ví dụ:
+			ZPOPMIN leaderboard
+		# Xóa và trả về thành viên có điểm thấp nhất
+	*/
+	cmdMap["zpopmin"] = ZPopMin
 	return cmdMap
 }
 

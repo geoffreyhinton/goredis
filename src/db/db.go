@@ -5,8 +5,10 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/geoffreyhinton/goredis/src/datastruct/dict/dict"
+	List "github.com/geoffreyhinton/goredis/src/datastruct/list"
 	"github.com/geoffreyhinton/goredis/src/datastruct/lock"
 	"github.com/geoffreyhinton/goredis/src/interface/redis"
 	"github.com/geoffreyhinton/goredis/src/lib/logger"
@@ -23,7 +25,6 @@ const (
 
 type DataEntity struct {
 	Code uint8
-	TTL  int64 // ttl in seconds, 0 for unlimited ttl
 	Data interface{}
 	sync.RWMutex
 }
@@ -38,9 +39,13 @@ type CmdFunc func(db *DB, args [][]byte) redis.Reply
 
 type DB struct {
 	Data *dict.Dict // key -> DataEntity
+	// key -> expireTime (time.Time)
+	TTLMap *dict.Dict
 	// dict will ensure thread safety of its method
 	// use this mutex for complicated command only, eg. rpush, incr ...
 	Locks *lock.LockMap
+	// TimerTask interval
+	interval time.Duration
 }
 
 var cmdMap = MakeCmdMap()
@@ -64,7 +69,13 @@ func MakeCmdMap() map[string]CmdFunc {
 	cmdMap["incrbyfloat"] = IncrByFloat
 	cmdMap["decr"] = Decr
 	cmdMap["decrby"] = DecrBy
-
+	cmdMap["expire"] = Expire
+	cmdMap["expireat"] = ExpireAt
+	cmdMap["pexpire"] = PExpire
+	cmdMap["pexpireat"] = PExpireAt
+	cmdMap["ttl"] = TTL
+	cmdMap["pttl"] = PTTL
+	cmdMap["persist"] = Persist
 	cmdMap["lpush"] = LPush
 	cmdMap["lpushx"] = LPushX
 	cmdMap["rpush"] = RPush
@@ -82,10 +93,14 @@ func MakeCmdMap() map[string]CmdFunc {
 }
 
 func MakeDB() *DB {
-	return &DB{
-		Data:  dict.Make(1024),
-		Locks: &lock.LockMap{},
+	db := &DB{
+		Data:     dict.Make(1024),
+		Locks:    &lock.LockMap{},
+		TTLMap:   dict.Make(512),
+		interval: 5 * time.Second,
 	}
+	db.TimerTask()
+	return db
 }
 
 func (db *DB) Exec(args [][]byte) (result redis.Reply) {
@@ -114,12 +129,34 @@ func (db *DB) Get(key string) (*DataEntity, bool) {
 	if !ok {
 		return nil, false
 	}
+	if db.IsExpired(key) {
+		return nil, false
+	}
 	entity, _ := raw.(*DataEntity)
 	return entity, true
 }
+func (db *DB) Expire(key string, expireTime time.Time) {
+	db.TTLMap.Put(key, expireTime)
+}
+func (db *DB) Persist(key string) {
+	db.TTLMap.Remove(key)
+}
 
+func (db *DB) IsExpired(key string) bool {
+	rawExpireTime, ok := db.TTLMap.Get(key)
+	if !ok {
+		return false
+	}
+	expireTime, _ := rawExpireTime.(time.Time)
+	expired := time.Now().After(expireTime)
+	if expired {
+		db.Data.Remove(key)
+	}
+	return expired
+}
 func (db *DB) Remove(key string) {
 	db.Data.Remove(key)
+	db.TTLMap.Remove(key)
 	db.Locks.Clean(key)
 }
 
@@ -134,8 +171,38 @@ func (db *DB) Removes(keys ...string) (deleted int) {
 		_, exists := db.Data.Get(key)
 		if exists {
 			db.Data.Remove(key)
+			db.TTLMap.Remove(key)
 			deleted++
 		}
 	}
 	return deleted
+}
+
+func (db *DB) cleanExpired() {
+	now := time.Now()
+	toRemove := &List.LinkedList{}
+	db.TTLMap.ForEach(func(key string, val interface{}) bool {
+		expireTime, _ := val.(time.Time)
+		if now.After(expireTime) {
+			db.Data.Remove(key)
+			db.Locks.Clean(key)
+			toRemove.Add(key)
+		}
+		return true
+	})
+	toRemove.ForEach(func(i int, val interface{}) bool {
+		key, _ := val.(string)
+		db.TTLMap.Remove(key)
+		return true
+	})
+}
+
+// start a goroutine to clean expired keys periodically
+func (db *DB) TimerTask() {
+	ticker := time.NewTicker(db.interval)
+	go func() {
+		for range ticker.C {
+			db.cleanExpired()
+		}
+	}()
 }

@@ -74,7 +74,7 @@ func HGet(db *DB, args [][]byte) redis.Reply {
 	if entity.Code != DictCode {
 		return &reply.WrongTypeErrReply{}
 	}
-	dict, _ := entity.Data.(*Dict.Dict)
+	dict, _ := entity.Data.(*dict.Dict)
 	raw, exists := dict.Get(field)
 	if !exists {
 		return &reply.NullBulkReply{}

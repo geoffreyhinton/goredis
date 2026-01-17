@@ -333,18 +333,113 @@ func MakeCmdMap() map[string]CmdFunc {
 	*/
 	cmdMap["lrange"] = LRange
 
+	/*
+		Hash Commands
+	*/
+	/*
+			hset
+		Công dụng: Công dụng: Set field-value trong hash
+		Ví dụ:
+			HSET user:1001 name "John" age 30
+		# Set name="John", age=30 trong hash user:1001
+	*/
 	cmdMap["hset"] = HSet
+	/*
+			hsetnx
+		Công dụng: Set field-value trong hash nếu field chưa tồn tại
+		Ví dụ:
+			HSETNX user:1001 email "john@example.com"
+		# Set email="john@example.com" trong hash user:1001 nếu field email chưa tồn tại
+	*/
 	cmdMap["hsetnx"] = HSetNX
+	/*
+			hget
+		Công dụng: Lấy giá trị của một field trong hash
+		Ví dụ:
+			HGET user:1001 name
+		# Trả về: "John"
+	*/
 	cmdMap["hget"] = HGet
+	/*
+			hexists
+		Công dụng: Kiểm tra sự tồn tại của một field trong hash
+		Ví dụ:
+			HEXISTS user:1001 age
+		# Trả về: 1 (nếu field tồn tại), 0 (nếu field không tồn tại)
+	*/
 	cmdMap["hexists"] = HExists
+	/*
+			hdel
+		Công dụng: Xoá một hoặc nhiều field khỏi hash
+		Ví dụ:
+			HDEL user:1001 age email
+		# Trả về: Số lượng field đã bị xoá
+	*/
 	cmdMap["hdel"] = HDel
+	/*
+			hlen
+		Công dụng: Lấy số lượng field trong hash
+		Ví dụ:
+			HLEN user:1001
+		# Trả về: Số lượng field trong hash user:1001
+	*/
 	cmdMap["hlen"] = HLen
+	/*
+			hmget
+		Công dụng: Lấy giá trị của nhiều field trong hash
+		Ví dụ:
+			HMGET user:1001 name age email
+		# Trả về: Giá trị của các field name, age, email
+	*/
 	cmdMap["hmget"] = HMGet
+	/*
+			hmset
+		Công dụng: Set nhiều field-value trong hash cùng lúc
+		Ví dụ:
+			HMSET user:1001 name "John" age 30 email "john@example.com"
+		# Set name="John", age=30, email="john@example.com" trong hash user:1001
+		# Trả về: OK
+	*/
 	cmdMap["hmset"] = HMSet
+	/*
+			hkeys
+		Công dụng: Lấy tất cả các field trong hash
+		Ví dụ:
+			HKEYS user:1001
+		# Trả về: Danh sách các field trong hash user:1001
+	*/
 	cmdMap["hkeys"] = HKeys
+	/*
+			hvals
+		Công dụng: Lấy tất cả các giá trị trong hash
+		Ví dụ:
+			HVALS user:1001
+		# Trả về: Danh sách các giá trị trong hash user:1001
+	*/
 	cmdMap["hvals"] = HVals
+	/*
+			hgetall
+		Công dụng: Lấy tất cả các field-value trong hash
+		Ví dụ:
+			HGETALL user:1001
+		# Trả về: Danh sách các field và giá trị trong hash user:1001
+	*/
 	cmdMap["hgetall"] = HGetAll
+	/*
+			hincrby
+		Công dụng: Tăng giá trị số nguyên của một field trong hash lên một số nguyên được chỉ định
+		Ví dụ:
+			HINCRBY user:1001 age 1
+		# Tăng giá trị của field age trong hash user:1001 lên 1
+	*/
 	cmdMap["hincrby"] = HIncrBy
+	/*
+			hincrbyfloat
+		Công dụng: Tăng giá trị số thực của một field trong hash lên một số thực được chỉ định
+		Ví dụ:
+			HINCRBYFLOAT account:1001 balance 10.5
+		# Tăng giá trị của field balance trong hash account:1001 lên 10.5
+	*/
 	cmdMap["hincrbyfloat"] = HIncrByFloat
 
 	return cmdMap

@@ -10,10 +10,16 @@ type Dict struct {
 	nextTable   []*Shard
 	nextTableMu sync.Mutex
 	count       int32
+
 	// -1: no rehashing in progress
 	// >=0 && < tableSize: table[rehashIndex] is rehashing
 	// >= tableSize: rehashing progress is finishing
 	rehashIndex int32
+}
+
+type Shard struct {
+	head  *Node
+	mutex sync.RWMutex
 }
 
 type Node struct {
@@ -23,11 +29,6 @@ type Node struct {
 	hashCode uint32
 }
 
-type Shard struct {
-	head  *Node
-	mutex sync.RWMutex
-}
-
 const (
 	maxCapacity      = 1 << 15
 	minCapacity      = 16
@@ -35,6 +36,8 @@ const (
 	loadFactor       = 0.75
 )
 
+// return the mini power of two which is not less than cap
+// See Hackers Delight, sec 3.2
 func computeCapacity(param int) (size int) {
 	if param <= minCapacity {
 		return minCapacity
@@ -58,7 +61,6 @@ func Make(shardCountHint int) *Dict {
 	for i := 0; i < shardCount; i++ {
 		table[i] = &Shard{}
 	}
-
 	d := &Dict{
 		count:       0,
 		rehashIndex: -1,
@@ -113,16 +115,16 @@ func (dict *Dict) getNextShard(hashCode uint32) *Shard {
 func (dict *Dict) ensureNextTable() {
 	if dict.nextTable == nil {
 		dict.nextTableMu.Lock()
-		defer dict.nextTableMu.Unlock()
 
+		// check-lock-check
 		if dict.nextTable == nil {
 			table, _ := dict.table.Load().([]*Shard)
 			tableSize := uint32(len(table))
+			// init next table
 			nextShardCount := tableSize * 2
 			if nextShardCount > maxCapacity || nextShardCount < 0 {
 				nextShardCount = maxCapacity
 			}
-
 			if nextShardCount <= tableSize {
 				// reach limit, cannot resize
 				atomic.StoreInt32(&dict.rehashIndex, -1)
@@ -134,8 +136,9 @@ func (dict *Dict) ensureNextTable() {
 				nextTable[i] = &Shard{}
 			}
 			dict.nextTable = nextTable
-
 		}
+
+		dict.nextTableMu.Unlock()
 	}
 }
 
@@ -145,6 +148,7 @@ func (shard *Shard) Get(key string) (val interface{}, exists bool) {
 	}
 	shard.mutex.RLock()
 	defer shard.mutex.RUnlock()
+
 	node := shard.head
 	for node != nil {
 		if node.key == key {
@@ -154,6 +158,7 @@ func (shard *Shard) Get(key string) (val interface{}, exists bool) {
 	}
 	return nil, false
 }
+
 func (dict *Dict) Get(key string) (val interface{}, exists bool) {
 	if dict == nil {
 		panic("dict is nil")
@@ -162,6 +167,11 @@ func (dict *Dict) Get(key string) (val interface{}, exists bool) {
 	index := dict.spread(hashCode)
 	rehashIndex := atomic.LoadInt32(&dict.rehashIndex)
 	if rehashIndex >= int32(index) {
+		/*
+		 * if rehashIndex > index. then the shard has finished resize, put in next table
+		 * if rehashIndex == index, the shard may be resizing or just finished.
+		 * Resizing will not be finished until the lock has been released
+		 */
 		dict.ensureNextTable()
 		nextShard := dict.getNextShard(hashCode)
 		val, exists = nextShard.Get(key)
@@ -172,7 +182,8 @@ func (dict *Dict) Get(key string) (val interface{}, exists bool) {
 		shard := dict.getShard(index)
 		val, exists = shard.Get(key)
 	}
-	return val, exists
+
+	return
 }
 
 func (dict *Dict) Len() int {
@@ -186,32 +197,34 @@ func (shard *Shard) Put(key string, val interface{}, hashCode uint32) int {
 	if shard == nil {
 		panic("shard is nil")
 	}
-
 	shard.mutex.Lock()
 	defer shard.mutex.Unlock()
 
 	node := shard.head
 	if node == nil {
-		shard.head = &Node{
-			key: key,
-			val: val,
-
+		// empty shard
+		node = &Node{
+			key:      key,
+			val:      val,
 			hashCode: hashCode,
 		}
-		return 1 // inserted
+		shard.head = node
+		return 1
 	} else {
 		for {
 			if node.key == key {
+				// existed node
 				node.val = val
 				return 0
 			}
 			if node.next == nil {
+				// append
 				node.next = &Node{
 					key:      key,
 					val:      val,
 					hashCode: hashCode,
 				}
-				return 1 // inserted
+				return 1
 			}
 			node = node.next
 		}
@@ -287,7 +300,6 @@ func (dict *Dict) PutIfAbsent(key string, val interface{}) (result int) {
 	}
 	hashCode := fnv32(key)
 	index := dict.spread(hashCode)
-
 	rehashIndex := atomic.LoadInt32(&dict.rehashIndex)
 	if rehashIndex >= int32(index) {
 		dict.ensureNextTable()
@@ -502,6 +514,9 @@ func (shard *Shard) ForEach(consumer Consumer) bool {
 	return true
 }
 
+/*
+ * may not contains new entry inserted during traversal
+ */
 func (dict *Dict) ForEach(consumer Consumer) {
 	if dict == nil {
 		panic("dict is nil")

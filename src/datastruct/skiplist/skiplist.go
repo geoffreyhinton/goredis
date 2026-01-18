@@ -100,7 +100,7 @@ func (sl *SkipList) Delete(score float64, member string) bool {
 	update := make([]*SkipListNode, maxLevel)
 	x := sl.Header
 	for i := sl.Level - 1; i >= 0; i-- {
-		for x.Forward[i] != nil && (x.Forward[i].Score == score && x.Forward[i].Member < member) {
+		for x.Forward[i] != nil && (x.Forward[i].Score < score || (x.Forward[i].Score == score && x.Forward[i].Member < member)) {
 			x = x.Forward[i]
 		}
 		update[i] = x
@@ -149,20 +149,31 @@ func (sl *SkipList) Search(score float64, member string) *SkipListNode {
 // GetRank returns the rank (0-based) of a member
 func (sl *SkipList) GetRank(score float64, member string) int64 {
 	rank := int64(0)
-	x := sl.Header
+	current := sl.Header.Forward[0] // Start from first actual node
 
-	for i := sl.Level - 1; i >= 0; i-- {
-		for x.Forward[i] != nil &&
-			(x.Forward[i].Score < score ||
-				(x.Forward[i].Score == score && x.Forward[i].Member <= member)) {
-			rank++
-			x = x.Forward[i]
+	// Walk through the list at level 0
+	for current != nil {
+		if current.Score > score {
+			// We've passed the target score, member not found
+			return -1
+		}
+		if current.Score == score {
+			if current.Member == member {
+				// Found the exact node
+				return rank
+			}
+			if current.Member > member {
+				// We've passed the target member lexicographically, not found
+				return -1
+			}
 		}
 
-		if x.Score == score && x.Member == member {
-			return rank
-		}
+		// This node comes before our target, count it and continue
+		rank++
+		current = current.Forward[0]
 	}
+
+	// Reached end of list without finding the node
 	return -1
 }
 

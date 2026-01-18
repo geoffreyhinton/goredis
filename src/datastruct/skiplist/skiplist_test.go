@@ -920,11 +920,11 @@ func TestSkipList_GetRank_MultipleNodes(t *testing.T) {
 		member       string
 		expectedRank int64
 	}{
-		{10.0, "first", 1},  // lowest score
-		{20.0, "second", 2}, // second lowest
-		{30.0, "third", 3},  // middle
-		{40.0, "fourth", 4}, // second highest
-		{50.0, "fifth", 5},  // highest score
+		{10.0, "first", 0},  // lowest score
+		{20.0, "second", 1}, // second lowest
+		{30.0, "third", 2},  // middle
+		{40.0, "fourth", 3}, // second highest
+		{50.0, "fifth", 4},  // highest score
 	}
 
 	for _, test := range expectedRanks {
@@ -947,12 +947,12 @@ func TestSkipList_GetRank_SameScore_LexicographicalOrder(t *testing.T) {
 		sl.Insert(score, member)
 	}
 
-	// Expected order: apple(1), banana(2), cherry(3), zebra(4)
+	// Expected order: apple(0), banana(1), cherry(2), zebra(3)
 	expectedRanks := map[string]int64{
-		"apple":  1,
-		"banana": 2,
-		"cherry": 3,
-		"zebra":  4,
+		"apple":  0,
+		"banana": 1,
+		"cherry": 2,
+		"zebra":  3,
 	}
 
 	for member, expectedRank := range expectedRanks {
@@ -989,11 +989,11 @@ func TestSkipList_GetRank_MixedScoresAndMembers(t *testing.T) {
 		member       string
 		expectedRank int64
 	}{
-		{10.0, "a", 1},
-		{10.0, "z", 2},
-		{20.0, "a", 3},
-		{20.0, "b", 4},
-		{30.0, "x", 5},
+		{10.0, "a", 0},
+		{10.0, "z", 1},
+		{20.0, "a", 2},
+		{20.0, "b", 3},
+		{30.0, "x", 4},
 	}
 
 	for _, test := range expectedRanks {
@@ -1039,31 +1039,31 @@ func TestSkipList_GetRank_AfterInsertAndDelete(t *testing.T) {
 	sl := NewSkipList()
 
 	// Insert nodes
-	sl.Insert(10.0, "a") // rank 1
-	sl.Insert(20.0, "b") // rank 2
-	sl.Insert(30.0, "c") // rank 3
-	sl.Insert(40.0, "d") // rank 4
+	sl.Insert(10.0, "a") // rank 0
+	sl.Insert(20.0, "b") // rank 1
+	sl.Insert(30.0, "c") // rank 2
+	sl.Insert(40.0, "d") // rank 3
 
 	// Verify initial ranks
-	if rank := sl.GetRank(10.0, "a"); rank != 1 {
-		t.Errorf("Expected rank 1 for 'a', got %d", rank)
+	if rank := sl.GetRank(10.0, "a"); rank != 0 {
+		t.Errorf("Expected rank 0 for 'a', got %d", rank)
 	}
-	if rank := sl.GetRank(30.0, "c"); rank != 3 {
-		t.Errorf("Expected rank 3 for 'c', got %d", rank)
+	if rank := sl.GetRank(30.0, "c"); rank != 2 {
+		t.Errorf("Expected rank 2 for 'c', got %d", rank)
 	}
 
 	// Delete middle node
 	sl.Delete(20.0, "b")
 
-	// Ranks should shift: a(1), c(2), d(3)
+	// Ranks should shift: a(0), c(1), d(2)
 	expectedAfterDelete := []struct {
 		score        float64
 		member       string
 		expectedRank int64
 	}{
-		{10.0, "a", 1},
-		{30.0, "c", 2}, // shifted down
-		{40.0, "d", 3}, // shifted down
+		{10.0, "a", 0},
+		{30.0, "c", 1}, // shifted down
+		{40.0, "d", 2}, // shifted down
 	}
 
 	for _, test := range expectedAfterDelete {

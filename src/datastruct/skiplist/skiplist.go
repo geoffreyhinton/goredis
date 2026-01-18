@@ -97,6 +97,37 @@ func (sl *SkipList) Insert(score float64, member string) *SkipListNode {
 
 // Delete removes a node from the skip list
 func (sl *SkipList) Delete(score float64, member string) bool {
+	update := make([]*SkipListNode, maxLevel)
+	x := sl.Header
+	for i := sl.Level - 1; i >= 0; i-- {
+		for x.Forward[i] != nil && (x.Forward[i].Score == score && x.Forward[i].Member < member) {
+			x = x.Forward[i]
+		}
+		update[i] = x
+	}
+	x = x.Forward[0]
+	if x == nil || x.Score != score || x.Member != member {
+		return false
+	}
+
+	// Remove node
+	for i := 0; i < sl.Level; i++ {
+		if update[i].Forward[i] != x {
+			break
+		}
+		update[i].Forward[i] = x.Forward[i]
+	}
+	// Update tail if necessary
+	if x == sl.Tail {
+		sl.Tail = update[0]
+	}
+
+	// Reduce level if necessary
+	for sl.Level > 1 && sl.Header.Forward[sl.Level-1] == nil {
+		sl.Level--
+	}
+
+	sl.Length--
 	return true
 }
 
@@ -112,5 +143,5 @@ func (sl *SkipList) GetRank(score float64, member string) int64 {
 
 // GetByRank returns the node at the specified rank (0-based)
 func (sl *SkipList) GetByRank(rank int64) *SkipListNode {
-	return 0
+	return nil
 }

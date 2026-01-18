@@ -150,11 +150,15 @@ func (sl *SkipList) Search(score float64, member string) *SkipListNode {
 func (sl *SkipList) GetRank(score float64, member string) int64 {
 	rank := int64(0)
 	x := sl.Header
+
 	for i := sl.Level - 1; i >= 0; i-- {
-		for x.Forward[i] != nil && (x.Forward[i].Score < score || (x.Forward[i].Score == score && x.Forward[i].Member <= member)) {
+		for x.Forward[i] != nil &&
+			(x.Forward[i].Score < score ||
+				(x.Forward[i].Score == score && x.Forward[i].Member <= member)) {
 			rank++
 			x = x.Forward[i]
 		}
+
 		if x.Score == score && x.Member == member {
 			return rank
 		}

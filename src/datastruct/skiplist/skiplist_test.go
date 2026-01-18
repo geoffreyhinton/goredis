@@ -696,3 +696,432 @@ func BenchmarkSkipList_Delete_Random(b *testing.B) {
 		sl.Delete(scores[i], "node")
 	}
 }
+
+// ===== SEARCH TESTS =====
+
+func TestSkipList_Search_EmptyList(t *testing.T) {
+	sl := NewSkipList()
+
+	// Search in empty list
+	result := sl.Search(10.0, "test")
+
+	if result != nil {
+		t.Error("Search should return nil for empty list")
+	}
+}
+
+func TestSkipList_Search_SingleNode_Found(t *testing.T) {
+	sl := NewSkipList()
+
+	// Insert single node
+	inserted := sl.Insert(10.0, "test")
+
+	// Search for the node
+	result := sl.Search(10.0, "test")
+
+	if result == nil {
+		t.Fatal("Search should find the existing node")
+	}
+	if result != inserted {
+		t.Error("Search should return the same node that was inserted")
+	}
+	if result.Score != 10.0 {
+		t.Errorf("Expected score 10.0, got %f", result.Score)
+	}
+	if result.Member != "test" {
+		t.Errorf("Expected member 'test', got '%s'", result.Member)
+	}
+}
+
+func TestSkipList_Search_SingleNode_NotFound(t *testing.T) {
+	sl := NewSkipList()
+
+	// Insert single node
+	sl.Insert(10.0, "test")
+
+	// Search for different nodes
+	testCases := []struct {
+		score  float64
+		member string
+		desc   string
+	}{
+		{5.0, "test", "score too low"},
+		{15.0, "test", "score too high"},
+		{10.0, "other", "correct score, wrong member"},
+		{5.0, "other", "both score and member wrong"},
+	}
+
+	for _, tc := range testCases {
+		result := sl.Search(tc.score, tc.member)
+		if result != nil {
+			t.Errorf("Search should return nil for %s", tc.desc)
+		}
+	}
+}
+
+func TestSkipList_Search_MultipleNodes(t *testing.T) {
+	sl := NewSkipList()
+
+	// Insert multiple nodes
+	testNodes := []struct {
+		score  float64
+		member string
+	}{
+		{10.0, "first"},
+		{20.0, "second"},
+		{30.0, "third"},
+		{25.0, "middle"},
+		{15.0, "between"},
+	}
+
+	insertedNodes := make(map[string]*SkipListNode)
+	for _, node := range testNodes {
+		inserted := sl.Insert(node.score, node.member)
+		insertedNodes[node.member] = inserted
+	}
+
+	// Search for each inserted node
+	for _, node := range testNodes {
+		result := sl.Search(node.score, node.member)
+		if result == nil {
+			t.Errorf("Should find node %s with score %f", node.member, node.score)
+			continue
+		}
+
+		expected := insertedNodes[node.member]
+		if result != expected {
+			t.Errorf("Search returned different node for %s", node.member)
+		}
+		if result.Score != node.score {
+			t.Errorf("Node %s: expected score %f, got %f", node.member, node.score, result.Score)
+		}
+		if result.Member != node.member {
+			t.Errorf("Node %s: expected member %s, got %s", node.member, node.member, result.Member)
+		}
+	}
+}
+
+func TestSkipList_Search_SameScore_DifferentMembers(t *testing.T) {
+	sl := NewSkipList()
+
+	// Insert nodes with same score
+	members := []string{"apple", "banana", "cherry", "date"}
+	score := 10.0
+
+	insertedNodes := make(map[string]*SkipListNode)
+	for _, member := range members {
+		inserted := sl.Insert(score, member)
+		insertedNodes[member] = inserted
+	}
+
+	// Search for each member
+	for _, member := range members {
+		result := sl.Search(score, member)
+		if result == nil {
+			t.Errorf("Should find member %s", member)
+			continue
+		}
+
+		if result.Score != score {
+			t.Errorf("Member %s: expected score %f, got %f", member, score, result.Score)
+		}
+		if result.Member != member {
+			t.Errorf("Member %s: expected member %s, got %s", member, member, result.Member)
+		}
+		if result != insertedNodes[member] {
+			t.Errorf("Search returned different node for member %s", member)
+		}
+	}
+}
+
+func TestSkipList_Search_NonExistentNodes(t *testing.T) {
+	sl := NewSkipList()
+
+	// Insert some nodes
+	sl.Insert(10.0, "first")
+	sl.Insert(20.0, "second")
+	sl.Insert(30.0, "third")
+
+	// Search for non-existent nodes
+	testCases := []struct {
+		score  float64
+		member string
+		desc   string
+	}{
+		{5.0, "before", "score before all"},
+		{35.0, "after", "score after all"},
+		{15.0, "missing", "score between existing"},
+		{20.0, "wrong", "existing score, wrong member"},
+	}
+
+	for _, tc := range testCases {
+		result := sl.Search(tc.score, tc.member)
+		if result != nil {
+			t.Errorf("Search should return nil for %s (score: %f, member: %s)",
+				tc.desc, tc.score, tc.member)
+		}
+	}
+}
+
+// ===== GETRANK TESTS =====
+
+func TestSkipList_GetRank_EmptyList(t *testing.T) {
+	sl := NewSkipList()
+
+	// GetRank in empty list
+	rank := sl.GetRank(10.0, "test")
+
+	if rank != -1 {
+		t.Errorf("GetRank should return -1 for empty list, got %d", rank)
+	}
+}
+
+func TestSkipList_GetRank_SingleNode(t *testing.T) {
+	sl := NewSkipList()
+
+	// Insert single node
+	sl.Insert(10.0, "only")
+
+	// Get rank of existing node
+	rank := sl.GetRank(10.0, "only")
+	if rank != 0 {
+		t.Errorf("Expected rank 0 for only node, got %d", rank)
+	}
+
+	// Get rank of non-existent node
+	rank = sl.GetRank(20.0, "missing")
+	if rank != -1 {
+		t.Errorf("Expected rank -1 for non-existent node, got %d", rank)
+	}
+}
+
+func TestSkipList_GetRank_MultipleNodes(t *testing.T) {
+	sl := NewSkipList()
+
+	// Insert nodes in random order
+	nodes := []struct {
+		score  float64
+		member string
+	}{
+		{30.0, "third"},
+		{10.0, "first"},
+		{50.0, "fifth"},
+		{20.0, "second"},
+		{40.0, "fourth"},
+	}
+
+	for _, node := range nodes {
+		sl.Insert(node.score, node.member)
+	}
+
+	// Test ranks (should be 0-based, ordered by score)
+	expectedRanks := []struct {
+		score        float64
+		member       string
+		expectedRank int64
+	}{
+		{10.0, "first", 1},  // lowest score
+		{20.0, "second", 2}, // second lowest
+		{30.0, "third", 3},  // middle
+		{40.0, "fourth", 4}, // second highest
+		{50.0, "fifth", 5},  // highest score
+	}
+
+	for _, test := range expectedRanks {
+		rank := sl.GetRank(test.score, test.member)
+		if rank != test.expectedRank {
+			t.Errorf("Member %s: expected rank %d, got %d",
+				test.member, test.expectedRank, rank)
+		}
+	}
+}
+
+func TestSkipList_GetRank_SameScore_LexicographicalOrder(t *testing.T) {
+	sl := NewSkipList()
+
+	// Insert nodes with same score (should be ordered lexicographically)
+	score := 10.0
+	members := []string{"zebra", "apple", "banana", "cherry"}
+
+	for _, member := range members {
+		sl.Insert(score, member)
+	}
+
+	// Expected order: apple(1), banana(2), cherry(3), zebra(4)
+	expectedRanks := map[string]int64{
+		"apple":  1,
+		"banana": 2,
+		"cherry": 3,
+		"zebra":  4,
+	}
+
+	for member, expectedRank := range expectedRanks {
+		rank := sl.GetRank(score, member)
+		if rank != expectedRank {
+			t.Errorf("Member %s: expected rank %d, got %d",
+				member, expectedRank, rank)
+		}
+	}
+}
+
+func TestSkipList_GetRank_MixedScoresAndMembers(t *testing.T) {
+	sl := NewSkipList()
+
+	// Insert mix of scores and members
+	nodes := []struct {
+		score  float64
+		member string
+	}{
+		{20.0, "b"}, // rank 3
+		{10.0, "z"}, // rank 2
+		{10.0, "a"}, // rank 1 (same score as z, but lexicographically first)
+		{20.0, "a"}, // rank 4 (same score as b, but lexicographically first)
+		{30.0, "x"}, // rank 5
+	}
+
+	for _, node := range nodes {
+		sl.Insert(node.score, node.member)
+	}
+
+	// Expected order: (10.0,"a"):1, (10.0,"z"):2, (20.0,"a"):3, (20.0,"b"):4, (30.0,"x"):5
+	expectedRanks := []struct {
+		score        float64
+		member       string
+		expectedRank int64
+	}{
+		{10.0, "a", 1},
+		{10.0, "z", 2},
+		{20.0, "a", 3},
+		{20.0, "b", 4},
+		{30.0, "x", 5},
+	}
+
+	for _, test := range expectedRanks {
+		rank := sl.GetRank(test.score, test.member)
+		if rank != test.expectedRank {
+			t.Errorf("Node (%f,%s): expected rank %d, got %d",
+				test.score, test.member, test.expectedRank, rank)
+		}
+	}
+}
+
+func TestSkipList_GetRank_NonExistentNodes(t *testing.T) {
+	sl := NewSkipList()
+
+	// Insert some nodes
+	sl.Insert(10.0, "first")
+	sl.Insert(20.0, "second")
+	sl.Insert(30.0, "third")
+
+	// Test non-existent nodes
+	testCases := []struct {
+		score  float64
+		member string
+		desc   string
+	}{
+		{5.0, "before", "score before all"},
+		{35.0, "after", "score after all"},
+		{15.0, "missing", "score between existing"},
+		{20.0, "wrong", "existing score, wrong member"},
+		{10.0, "wrong", "existing score, wrong member"},
+	}
+
+	for _, tc := range testCases {
+		rank := sl.GetRank(tc.score, tc.member)
+		if rank != -1 {
+			t.Errorf("GetRank should return -1 for %s (score: %f, member: %s), got %d",
+				tc.desc, tc.score, tc.member, rank)
+		}
+	}
+}
+
+func TestSkipList_GetRank_AfterInsertAndDelete(t *testing.T) {
+	sl := NewSkipList()
+
+	// Insert nodes
+	sl.Insert(10.0, "a") // rank 1
+	sl.Insert(20.0, "b") // rank 2
+	sl.Insert(30.0, "c") // rank 3
+	sl.Insert(40.0, "d") // rank 4
+
+	// Verify initial ranks
+	if rank := sl.GetRank(10.0, "a"); rank != 1 {
+		t.Errorf("Expected rank 1 for 'a', got %d", rank)
+	}
+	if rank := sl.GetRank(30.0, "c"); rank != 3 {
+		t.Errorf("Expected rank 3 for 'c', got %d", rank)
+	}
+
+	// Delete middle node
+	sl.Delete(20.0, "b")
+
+	// Ranks should shift: a(1), c(2), d(3)
+	expectedAfterDelete := []struct {
+		score        float64
+		member       string
+		expectedRank int64
+	}{
+		{10.0, "a", 1},
+		{30.0, "c", 2}, // shifted down
+		{40.0, "d", 3}, // shifted down
+	}
+
+	for _, test := range expectedAfterDelete {
+		rank := sl.GetRank(test.score, test.member)
+		if rank != test.expectedRank {
+			t.Errorf("After delete, node (%f,%s): expected rank %d, got %d",
+				test.score, test.member, test.expectedRank, rank)
+		}
+	}
+
+	// Deleted node should not be found
+	if rank := sl.GetRank(20.0, "b"); rank != -1 {
+		t.Errorf("Deleted node should return rank -1, got %d", rank)
+	}
+}
+
+// Benchmark tests for Search and GetRank
+func BenchmarkSkipList_Search(b *testing.B) {
+	sl := NewSkipList()
+
+	// Pre-populate with nodes
+	for i := 0; i < 1000; i++ {
+		sl.Insert(float64(i), "node")
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sl.Search(float64(i%1000), "node")
+	}
+}
+
+func BenchmarkSkipList_GetRank(b *testing.B) {
+	sl := NewSkipList()
+
+	// Pre-populate with nodes
+	for i := 0; i < 1000; i++ {
+		sl.Insert(float64(i), "node")
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sl.GetRank(float64(i%1000), "node")
+	}
+}
+
+func BenchmarkSkipList_Search_Random(b *testing.B) {
+	sl := NewSkipList()
+
+	// Pre-populate with nodes
+	scores := make([]float64, 1000)
+	for i := 0; i < 1000; i++ {
+		score := float64(i * 7 % 1000)
+		scores[i] = score
+		sl.Insert(score, "node")
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sl.Search(scores[i%1000], "node")
+	}
+}

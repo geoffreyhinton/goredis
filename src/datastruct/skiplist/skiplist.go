@@ -133,12 +133,33 @@ func (sl *SkipList) Delete(score float64, member string) bool {
 
 // Search finds a node by score and member
 func (sl *SkipList) Search(score float64, member string) *SkipListNode {
+	x := sl.Header
+	for i := sl.Level - 1; i >= 0; i-- {
+		for x.Forward[i] != nil && (x.Forward[i].Score < score || (x.Forward[i].Score == score && x.Forward[i].Member < member)) {
+			x = x.Forward[i]
+		}
+	}
+	x = x.Forward[0]
+	if x != nil && x.Score == score && x.Member == member {
+		return x
+	}
 	return nil
 }
 
 // GetRank returns the rank (0-based) of a member
 func (sl *SkipList) GetRank(score float64, member string) int64 {
-	return 0
+	rank := int64(0)
+	x := sl.Header
+	for i := sl.Level - 1; i >= 0; i-- {
+		for x.Forward[i] != nil && (x.Forward[i].Score < score || (x.Forward[i].Score == score && x.Forward[i].Member <= member)) {
+			rank++
+			x = x.Forward[i]
+		}
+		if x.Score == score && x.Member == member {
+			return rank
+		}
+	}
+	return -1
 }
 
 // GetByRank returns the node at the specified rank (0-based)
